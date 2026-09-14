@@ -1,0 +1,30 @@
+services:
+  datadog-agent:
+    image: datadog/agent:latest
+    container_name: datadog-agent
+    pid: host
+    cgroup: host
+    environment:
+      DD_API_KEY: ${DD_API_KEY}
+      DD_SITE: ${DD_SITE:-datadoghq.com}
+      DD_LOGS_ENABLED: "true"
+      DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL: "true"
+      # Exclude only the agent's own *logs* - its own container metrics
+      # still get collected normally. See the tse1-tracker-docker project
+      # notes for why this is preferred over DD_CONTAINER_EXCLUDE.
+      DD_CONTAINER_EXCLUDE_LOGS: "name:datadog-agent"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - dd-agent-run:/opt/datadog-agent/run:rw
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+
+  dog-logs:
+    build: ./random-logger
+    image: myapp1
+    container_name: dog-logs
+    depends_on:
+      - datadog-agent
+
+volumes:
+  dd-agent-run:
